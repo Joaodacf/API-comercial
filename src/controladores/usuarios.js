@@ -1,4 +1,4 @@
-const knex = require("knex");
+const knex = require('../index.js');
 const bycript = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const senhajwt = require("../senhajwt.js")
@@ -20,16 +20,18 @@ const cadastrarUsuario = async function (req, res) {
         }
 
     } catch (error) {
-        return res.status(500).json({ mensagem: "erro interno no servidor" })
+
+        return res.status(500).json({ mensagem: "erro interno no cadastro" })
     }
     try {
         const novoUsuario = await knex('usuarios').insert({ nome, email, senha })
+        console.log(novoUsuario, "novoUsuario")
         return res.status(201).json(novoUsuario.rows[0]);
 
 
     } catch (error) {
 
-        return res.status(500).json({ mensagem: "erro interno no servidor" })
+        return res.status(500).json({ mensagem: "erro interno no cadastro" })
     }
 
 }
@@ -55,20 +57,24 @@ const loginUsuario = async function (req, res) {
         const { senha, ...usuario } = novoUsuario.rows[0]
         return res.status(200).json({ usuario, token })
     } catch (error) {
-        return res.status(500).json({ mensagem: 'erro interno no servidor' })
+        return res.status(500).json({ mensagem: 'erro interno no login' })
     }
 
 
 }
 const listarUsuarios = async function (req, res) {
-    const id = req.usuario.id
     try {
-        const usuarios = await knex('usuarios').select('*')
-        return res.status(200).json(usuarios)
+        console.log('aaaaaaaaa')
+        const usuarios = await knex('usuarios').select('*'); // use the db instance to interact with the database
+        console.log(usuarios, "usuarios")
+
+        return res.status(200).json(usuarios);
     } catch (error) {
-        return res.status(500).json({ mensagem: 'erro interno no servidor' })
+        console.log('aaaaaaaaa', error)
+        return res.status(500).json({ mensagem: 'erro interno no listar' });
     }
 }
+
 
 const atualizarUsuario = async function (req, res) {
     const id = req.usuario.id
@@ -82,7 +88,7 @@ const atualizarUsuario = async function (req, res) {
         const usuarioAtualizado = await knex('usuarios').where('id', id).update({ nome, email, senha: senhaCriptografada })
         return res.status(200).json({ mensagem: 'usuario atualizado com sucesso' })
     } catch (error) {
-        return res.status(500).json({ mensagem: 'erro interno no servidor' })
+        return res.status(500).json({ mensagem: 'erro interno no att' })
     }
 }
 
@@ -96,7 +102,7 @@ const deletarUsuario = async function (req, res) {
         const usuarioDeletado = await knex('usuarios').where('id', id).delete()
         return res.status(200).json({ mensagem: 'usuario deletado com sucesso' })
     } catch (error) {
-        return res.status(500).json({ mensagem: 'erro interno no servidor' })
+        return res.status(500).json({ mensagem: 'erro interno no deletar usuario' })
     }
 
 }
@@ -105,5 +111,6 @@ module.exports = {
     cadastrarUsuario,
     loginUsuario,
     listarUsuarios,
-    atualizarUsuario
+    atualizarUsuario,
+    deletarUsuario
 }
