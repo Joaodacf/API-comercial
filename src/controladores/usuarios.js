@@ -1,4 +1,4 @@
-const knex = require('../index.js');
+const knex = require('../db.js');
 const bycript = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const senhajwt = require("../senhajwt.js")
@@ -64,13 +64,13 @@ const loginUsuario = async function (req, res) {
 }
 const listarUsuarios = async function (req, res) {
     try {
-        console.log('aaaaaaaaa')
+
         const usuarios = await knex('usuarios').select('*'); // use the db instance to interact with the database
         console.log(usuarios, "usuarios")
 
         return res.status(200).json(usuarios);
     } catch (error) {
-        console.log('aaaaaaaaa', error)
+
         return res.status(500).json({ mensagem: 'erro interno no listar' });
     }
 }
@@ -93,18 +93,23 @@ const atualizarUsuario = async function (req, res) {
 }
 
 const deletarUsuario = async function (req, res) {
-    const id = req.usuario.id
-    try {
-        const usuario = await knex('usuarios').where('id', id)
-        if (usuario.rowCount < 1) {
-            return res.status(404).json({ mensagem: 'usuario nao encontrado' })
-        }
-        const usuarioDeletado = await knex('usuarios').where('id', id).delete()
-        return res.status(200).json({ mensagem: 'usuario deletado com sucesso' })
-    } catch (error) {
-        return res.status(500).json({ mensagem: 'erro interno no deletar usuario' })
+    // Check if req.usuario is defined
+    console.log(req);
+    if (!req.usuario) {
+        return res.status(400).json({ mensagem: 'usuario not defined' });
     }
 
+    const id = req.usuario.id;
+    try {
+        const usuario = await knex('usuarios').where('id', id);
+        if (usuario.length === 0) { // Use .length for arrays, not .rowCount
+            return res.status(404).json({ mensagem: 'usuario nao encontrado' });
+        }
+        const usuarioDeletado = await knex('usuarios').where('id', id).delete();
+        return res.status(200).json({ mensagem: 'usuario deletado com sucesso' });
+    } catch (error) {
+        return res.status(500).json({ mensagem: 'erro interno no deletar usuario' });
+    }
 }
 
 module.exports = {
