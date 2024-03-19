@@ -1,7 +1,8 @@
 const knex = require('../db.js');
-const bycript = require("bcrypt");
+const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
-const senhajwt = require("../senhajwt.js")
+const senhajwt = require("../senhajwt.js");
+
 
 
 const cadastrarUsuario = async function (req, res) {
@@ -25,8 +26,8 @@ const cadastrarUsuario = async function (req, res) {
     }
     try {
         const novoUsuario = await knex('usuarios').insert({ nome, email, senha })
-        console.log(novoUsuario, "novoUsuario")
-        return res.status(201).json(novoUsuario.rows[0]);
+
+        return res.status(201).json(novoUsuario.rows[0]).json({ mensagem: "usuario cadastrado com sucesso" });
 
 
     } catch (error) {
@@ -38,35 +39,33 @@ const cadastrarUsuario = async function (req, res) {
 
 const loginUsuario = async function (req, res) {
     const { email, senha } = req.body;
-    try {
-        if (!email) {
-            return res.status(404).json({ mensagem: 'email obrigatorio' })
-        }
-        if (!senha) {
-            return res.status(404).json({ mensagem: ' senha obrigatorio' })
-        }
-        const novoUsuario = await knex('*').from('usuarios').where('email', email);
-        if (novoUsuario.rowcount < 1) {
-            return res.status(404).json({ mensagem: 'usuario nao encontrado' })
-        }
-        const senhaValida = await bycript.compare(senha, novoUsuario.rows[0].senha)
-        if (!senhaValida) {
-            return res.status(400).json({ mensagem: 'senha invalida' })
-        }
-        const token = jwt.sign({ id: novoUsuario.rows[0].id }, senhajwt, { expiresIn: '1h' })
-        const { senha, ...usuario } = novoUsuario.rows[0]
-        return res.status(200).json({ usuario, token })
-    } catch (error) {
-        return res.status(500).json({ mensagem: 'erro interno no login' })
+    if (!email || !senha) {
+        return res.status(400).json({ mensagem: 'email e senha são obrigatórios' });
     }
+    try {
+        const usuario = await knex('usuarios').where('email', email);
+        if (usuario.length === 0) {
+            return res.status(404).json({ mensagem: 'usuario nao encontrado' });
+        }
+        const senhaCorreta = await bcrypt.compare(senha, usuario[0].senha);
+        if (!senhaCorreta) {
+            return res.status(400).json({ mensagem: 'email ou senha invalidos' });
+        }
+        const token = jwt.sign({ id: usuario[0].id }, senhajwt, { expiresIn: '8h' });
 
+        const { senha: _, ...usuarioLogado } = usuario[0];
 
+        return res.json({ usuario: usuarioLogado, token })
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensagem: "erro interno no login" });
+    }
 }
 const listarUsuarios = async function (req, res) {
     try {
 
-        const usuarios = await knex('usuarios').select('*'); // use the db instance to interact with the database
-        console.log(usuarios, "usuarios")
+        const usuarios = await knex('usuarios').select('*');
+
 
         return res.status(200).json(usuarios);
     } catch (error) {
@@ -77,7 +76,7 @@ const listarUsuarios = async function (req, res) {
 
 
 const atualizarUsuario = async function (req, res) {
-    const id = req.usuario.id
+    const { id } = req.params
     const { nome, email, senha } = req.body
     try {
         const usuario = await knex('usuarios').where('id', id)
@@ -93,24 +92,25 @@ const atualizarUsuario = async function (req, res) {
 }
 
 const deletarUsuario = async function (req, res) {
-    // Check if req.usuario is defined
-    console.log(req);
-    if (!req.usuario) {
-        return res.status(400).json({ mensagem: 'usuario not defined' });
+    const { id } = req.params
+
+    try {
+        const usuario = await knex('usuarios').where('id', id)
+        if (usuario.rowCount < 1) {
+            return res.status(404).json({ mensagem: 'usuario nao encontrado' })
+        }
+        const usuarioDeletado = await knex('usuarios').where('id', id).delete()
+        if (usuarioDeletado) {
+            return res.status(200).json({ mensagem: 'usuario deletado com sucesso' })
+        } else {
+            return res.status(500).json({ mensagem: 'erro interno no deletar' })
+        }
+    } catch (error) {
+        return res.status(500).json({ mensagem: 'erro interno no deletar' })
     }
 
-    const id = req.usuario.id;
-    try {
-        const usuario = await knex('usuarios').where('id', id);
-        if (usuario.length === 0) { // Use .length for arrays, not .rowCount
-            return res.status(404).json({ mensagem: 'usuario nao encontrado' });
-        }
-        const usuarioDeletado = await knex('usuarios').where('id', id).delete();
-        return res.status(200).json({ mensagem: 'usuario deletado com sucesso' });
-    } catch (error) {
-        return res.status(500).json({ mensagem: 'erro interno no deletar usuario' });
-    }
 }
+
 
 module.exports = {
     cadastrarUsuario,
