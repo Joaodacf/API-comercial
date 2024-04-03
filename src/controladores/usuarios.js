@@ -4,10 +4,10 @@ const jwt = require("jsonwebtoken");
 const senhajwt = require("../senhajwt.js");
 
 
-
 const cadastrarUsuario = async function (req, res) {
     const { nome, email, senha } = req.body;
-    const senhaCriptografada = await bycript.hash(senha, 10)
+    const senhaCriptografada = bcrypt.hash(senha, 10);
+
 
     try {
         if (!nome) {
@@ -25,7 +25,8 @@ const cadastrarUsuario = async function (req, res) {
         return res.status(500).json({ mensagem: "erro interno no cadastro" })
     }
     try {
-        const novoUsuario = await knex('usuarios').insert({ nome, email, senha })
+        const senhaHash = await bcrypt.hash(senha, 10)
+        const novoUsuario = await knex('usuarios').insert({ nome, email, senha: senhaHash })
 
         return res.status(201).json(novoUsuario.rows[0]).json({ mensagem: "usuario cadastrado com sucesso" });
 
@@ -43,6 +44,7 @@ const loginUsuario = async function (req, res) {
         return res.status(400).json({ mensagem: 'email e senha são obrigatórios' });
     }
     try {
+
         const usuario = await knex('usuarios').where('email', email);
         if (usuario.length === 0) {
             return res.status(404).json({ mensagem: 'usuario nao encontrado' });
