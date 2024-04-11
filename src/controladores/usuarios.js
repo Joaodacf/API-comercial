@@ -2,12 +2,13 @@ const knex = require('../db.js');
 const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
 const senhajwt = require("../senhajwt.js");
+const transportador = require("../email.js")
+const { getUserByEmail, getUserById } = require('../services/users.service.js');
+
 
 
 const cadastrarUsuario = async function (req, res) {
     const { nome, email, senha } = req.body;
-    const senhaCriptografada = bcrypt.hash(senha, 10);
-
 
     try {
         if (!nome) {
@@ -19,16 +20,15 @@ const cadastrarUsuario = async function (req, res) {
         if (!senha) {
             return res.status(400).json({ mensagem: 'A senha é obrigatoria' })
         }
+        const verificacaoPorEmail = await getUserByEmail({ email });
+        if (verificacaoPorEmail) {
+            return res.status(409).json({ mensagem: 'email ja cadastrado' })
+        }
 
-    } catch (error) {
-
-        return res.status(500).json({ mensagem: "erro interno no cadastro" })
-    }
-    try {
         const senhaHash = await bcrypt.hash(senha, 10)
         const novoUsuario = await knex('usuarios').insert({ nome, email, senha: senhaHash })
 
-        return res.status(201).json(novoUsuario.rows[0]).json({ mensagem: "usuario cadastrado com sucesso" });
+        return res.status(201).json({ mensagem: "usuario cadastrado com sucesso" });
 
 
     } catch (error) {
@@ -45,21 +45,22 @@ const loginUsuario = async function (req, res) {
     }
     try {
 
-        const usuario = await knex('usuarios').where('email', email);
-        if (usuario.length === 0) {
+        const usuario = await getUserByEmail({ email });
+
+        if (!usuario) {
             return res.status(404).json({ mensagem: 'usuario nao encontrado' });
         }
-        const senhaCorreta = await bcrypt.compare(senha, usuario[0].senha);
+        const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
         if (!senhaCorreta) {
             return res.status(400).json({ mensagem: 'email ou senha invalidos' });
         }
-        const token = jwt.sign({ id: usuario[0].id }, senhajwt, { expiresIn: '8h' });
+        const token = jwt.sign({ id: usuario.id }, senhajwt, { expiresIn: '8h' });
 
-        const { senha: _, ...usuarioLogado } = usuario[0];
+        const { senha: _, ...usuarioLogado } = usuario;
 
         return res.json({ usuario: usuarioLogado, token })
+
     } catch (error) {
-        console.error(error);
         return res.status(500).json({ mensagem: "erro interno no login" });
     }
 }
@@ -81,10 +82,16 @@ const atualizarUsuario = async function (req, res) {
     const { id } = req.params
     const { nome, email, senha } = req.body
     try {
-        const usuario = await knex('usuarios').where('id', id)
-        if (usuario.rowCount < 1) {
+        const usuario = getUserById({ id });
+
+        if (!usuario) {
             return res.status(404).json({ mensagem: 'usuario nao encontrado' })
         }
+        const verificacaoPorEmail = await getUserByEmail({ email });
+        if (verificacaoPorEmail && verificacaoPorEmail.id != id) {
+            return res.status(409).json({ mensagem: 'email ja cadastrado' })
+        }
+
         const senhaCriptografada = await bycript.hash(senha, 10)
         const usuarioAtualizado = await knex('usuarios').where('id', id).update({ nome, email, senha: senhaCriptografada })
         return res.status(200).json({ mensagem: 'usuario atualizado com sucesso' })
@@ -97,8 +104,8 @@ const deletarUsuario = async function (req, res) {
     const { id } = req.params
 
     try {
-        const usuario = await knex('usuarios').where('id', id)
-        if (usuario.rowCount < 1) {
+        const usuario = getUserById({ id });
+        if (!usuario) {
             return res.status(404).json({ mensagem: 'usuario nao encontrado' })
         }
         const usuarioDeletado = await knex('usuarios').where('id', id).delete()
@@ -112,12 +119,70 @@ const deletarUsuario = async function (req, res) {
     }
 
 }
+const esqueciSenha = async function (req, res) {
+    const { email } = req.body;
 
+    try {
+        const verificacaoPorEmail = await getUserByEmail({ email });
+        if (!verificacaoPorEmail) {
+            return res.status(409).json({ mensagem: 'usuario não encontrado ' })
+        }
+        const token = jwt.sign({ id: verificacaoPorEmail.id }, senhajwt, { expiresIn: 1000 * 60 * 10 });
+
+        transportador.sendMail({
+            from: `${process.env.EMAIL_NAME} <${process.env.EMAIL_FROM}>`,
+            to: `${verificacaoPorEmail.nome} <${verificacaoPorEmail.email}>`,
+            subject: 'recuperação de senha',
+            text: `para redefinir sua senha , copie o link abaixo e cole numa nova aba
+            ${process.env.REDIRECT_PASSWORD_REDEFINE}?token=${token}`
+
+        })
+        return res.status(200).json({ mensagem: 'email enviado com sucesso' })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ mensagem: 'erro interno na redefinição de senhaS' })
+
+    }
+}
+const redefinirSenha = async function (req, res) {
+    const { senha, confirmacaoSenha } = req.body
+    const { token } = req.query
+    try {
+        if (senha != confirmacaoSenha) {
+            return res.status(400).json({ mensagem: 'senhas não conferem' })
+        }
+        if (!token) {
+            return res.status(400).json({ mensagem: 'token não encontrado' })
+        }
+        const { id } = jwt.verify(token, senhajwt)
+
+        const usuario = await getUserById({ id })
+        if (!usuario) {
+            return res.status(404).json({ mensagem: 'usuario não encontrado' })
+        }
+        const senhaCriptografada = await bcrypt.hashSync(senha, 10)
+        const novoUsuario = await knex('usuarios').update({ senha: senhaCriptografada })
+
+        transportador.sendMail({
+            from: `${process.env.EMAIL_NAME} <${process.env.EMAIL_FROM}>`,
+            to: `${usuario.nome} <${usuario.email}>`,
+            subject: 'verificacao de email',
+            text: 'sua senha foi atualizada com sucesso'
+        })
+
+        return res.status(200).json({ mensagem: 'senha redefinida com sucesso' })
+
+    } catch (error) {
+        return res.status(500).json({ mensagem: 'erro ao redefinir sua senha' })
+    }
+}
 
 module.exports = {
     cadastrarUsuario,
     loginUsuario,
     listarUsuarios,
     atualizarUsuario,
-    deletarUsuario
+    deletarUsuario,
+    esqueciSenha,
+    redefinirSenha
 }

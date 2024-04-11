@@ -15,6 +15,10 @@ rotas.get("/usuario", usuario.listarUsuarios)
 rotas.put("/usuario/:id", usuario.atualizarUsuario)
 rotas.delete("/usuario/:id", usuario.deletarUsuario)
 
+// rotas senha 
+rotas.post("/usuario/esqueci-senha", usuario.esqueciSenha)
+rotas.post("/usuario/redefinir-senha", usuario.redefinirSenha)
+
 // rotas produtos 
 rotas.post("/produto", cadastrarProduto)
 rotas.put('/produto/:id', editarProduto)
