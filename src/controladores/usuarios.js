@@ -4,6 +4,10 @@ const jwt = require("jsonwebtoken");
 const senhajwt = require("../senhajwt.js");
 const transportador = require("../email.js")
 const { getUserByEmail, getUserById } = require('../services/users.service.js');
+const handlebar = require("handlebars");
+const compiladorhtml = require('../compiladorhtml.js');
+
+
 
 
 
@@ -46,6 +50,7 @@ const loginUsuario = async function (req, res) {
     try {
 
         const usuario = await getUserByEmail({ email });
+
 
         if (!usuario) {
             return res.status(404).json({ mensagem: 'usuario nao encontrado' });
@@ -129,13 +134,17 @@ const esqueciSenha = async function (req, res) {
         }
         const token = jwt.sign({ id: verificacaoPorEmail.id }, senhajwt, { expiresIn: 1000 * 60 * 10 });
 
+
+        const html = await compiladorhtml("./src/controladores/templates/esqueciSenha.html", {
+            nomeusuario: verificacaoPorEmail.nome,
+            link: `http://localhost:3000/redefinir-senha/${token}`,
+        })
+
         transportador.sendMail({
             from: `${process.env.EMAIL_NAME} <${process.env.EMAIL_FROM}>`,
             to: `${verificacaoPorEmail.nome} <${verificacaoPorEmail.email}>`,
-            subject: 'recuperação de senha',
-            text: `para redefinir sua senha , copie o link abaixo e cole numa nova aba
-            ${process.env.REDIRECT_PASSWORD_REDEFINE}?token=${token}`
-
+            subject: 'Redefinição de senha da sua conta',
+            html,
         })
         return res.status(200).json({ mensagem: 'email enviado com sucesso' })
     } catch (error) {
@@ -163,11 +172,16 @@ const redefinirSenha = async function (req, res) {
         const senhaCriptografada = await bcrypt.hashSync(senha, 10)
         const novoUsuario = await knex('usuarios').update({ senha: senhaCriptografada })
 
+        const html = await compiladorhtml("./src/controladores/templates/redefinirSenha.html", {
+            nomeusuario: verificacaoPorEmail.nome,
+
+        })
+
         transportador.sendMail({
             from: `${process.env.EMAIL_NAME} <${process.env.EMAIL_FROM}>`,
             to: `${usuario.nome} <${usuario.email}>`,
-            subject: 'verificacao de email',
-            text: 'sua senha foi atualizada com sucesso'
+            subject: 'senha redefinida',
+            html,
         })
 
         return res.status(200).json({ mensagem: 'senha redefinida com sucesso' })

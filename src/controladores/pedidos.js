@@ -74,7 +74,7 @@ const cadastrarPedido = async function (req, res) {
 }
 
 const listarPedidos = async function (req, res) {
-    const { cliente_id } = req.query;
+    const { usuario_id } = req.query;
 
     let pedidos = [];
     let compra = [];
