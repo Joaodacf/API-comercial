@@ -5,9 +5,7 @@ const cadastrarPedido = async function (req, res) {
 
     let valorTotal = 0;
 
-    if (!usuario_id) {
-        return res.status(400).json('o campo cliente_id é obrigatório')
-    }
+
     if (!observacao) {
         return res.status(400).json('o campo observacao é obrigatorio')
     }
@@ -38,7 +36,7 @@ const cadastrarPedido = async function (req, res) {
             produto.quantidade_estoque = validarProduto.quantidade_estoque
         }
         const cadastroPedido = await knex('pedidos').insert({
-            cliente_id,
+
             observacao,
             valor_total: valorTotal
         }).returning('*')
@@ -74,19 +72,13 @@ const cadastrarPedido = async function (req, res) {
 }
 
 const listarPedidos = async function (req, res) {
-    const { usuario_id } = req.query;
+
 
     let pedidos = [];
     let compra = [];
 
     try {
-        if (cliente_id) {
-            pedidos = await knex('pedidos').where({
-                cliente_id
-            })
-        } else {
-            pedidos = await knex('pedidos')
-        }
+        pedidos = await knex('pedidos').select('*')
         for (const pedido of pedidos) {
             const compras = {
                 pedido: {

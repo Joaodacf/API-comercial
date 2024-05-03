@@ -1,8 +1,8 @@
-const knex = require('knex');
+const knex = require('../db');
 
 const cadastrarProduto = async function (req, res) {
-    const { usuario } = req;
-    const { descricao, quantidade_estoque, valor, categoria_id } = req.body;
+
+    const { descricao, quantidade_estoque, valor, categoria_id, usuario_id } = req.body;
 
     if (!descricao) {
         return res.status(404).json('A descrição é obrigatória');
@@ -18,7 +18,7 @@ const cadastrarProduto = async function (req, res) {
     }
     try {
         const produto = await knex('produtos').insert({
-            usuario_id: usuario.id,
+
             descricao,
             quantidade_estoque,
             valor,
@@ -31,12 +31,13 @@ const cadastrarProduto = async function (req, res) {
         return res.status(200).json(produto[0])
 
     } catch (error) {
+        console.log(error);
         return res.status(400).json({ mensagem: "erro no cadastro de produtos interno" });
     }
 
 }
 const editarProduto = async function (req, res) {
-    const { usuario } = req;
+
     const { id } = req.params;
     const { descricao, quantidade_estoque, valor, categoria_id } = req.body;
 
@@ -45,8 +46,8 @@ const editarProduto = async function (req, res) {
     }
     try {
         const produto = await knex('produtos').where({
-            id,
-            usuario_id: usuario.id
+            id
+
         }).first()
 
         if (!produto) {
@@ -55,7 +56,7 @@ const editarProduto = async function (req, res) {
 
         const produtoEditado = await knex('produtos').where({
             id: produto.id,
-            usuario_id: usuario.id
+
         })
             .update({
                 descricao,
@@ -73,31 +74,32 @@ const editarProduto = async function (req, res) {
     }
 }
 const detalharProdutoID = async function (req, res) {
-    const { usuario } = req;
+
     const { id } = req.params;
 
     try {
         const produto = await knex('produtos').where({
             id,
-            usuario_id: usuario.id
+
         }).first()
 
         if (!produto) {
             return res.status(404).json('produto não encontrado no sistema')
         }
+        return res.status(200).json(produto);
 
     } catch (error) {
         return res.status(500).json({ mensagem: 'erro interno no detalhar produto ' })
     }
 }
 const deletarProduto = async function (req, res) {
-    const { usuario } = req;
+
     const { id } = req.params;
 
     try {
         const produto = await knex('produtos').where({
             id,
-            usuario_id: usuario.id
+
         }).first()
 
         if (!produto) {
@@ -106,7 +108,7 @@ const deletarProduto = async function (req, res) {
 
         const produtoExcluido = await knex('produtos').where({
             id,
-            usuario_id: usuario.id
+
         })
             .del()
 
@@ -121,7 +123,7 @@ const deletarProduto = async function (req, res) {
 
 }
 const listaProdutos = async function (req, res) {
-    const { usuario } = req;
+
     const { categoria_id } = req.query;
 
     let produtos = [];
@@ -135,11 +137,11 @@ const listaProdutos = async function (req, res) {
                 return res.status(404).json('categoria não encontrada')
             }
             produtos = await knex('produtos')
-                .where({ usuario_id: usuario.id })
-                .andWhere({ categoria_id })
+                .where({ categoria_id })
+
         } else {
             produtos = await knex('produtos')
-                .where({ usuario_id: usuario.id })
+
         }
 
         return res.status(200).json(produtos);

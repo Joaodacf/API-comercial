@@ -137,7 +137,7 @@ const esqueciSenha = async function (req, res) {
 
         const html = await compiladorhtml("./src/controladores/templates/esqueciSenha.html", {
             nomeusuario: verificacaoPorEmail.nome,
-            link: `http://localhost:3000/redefinir-senha/${token}`,
+            link: `http://localhost:3000/usuario/redefinir-senha/${token}`,
         })
 
         transportador.sendMail({
@@ -155,7 +155,7 @@ const esqueciSenha = async function (req, res) {
 }
 const redefinirSenha = async function (req, res) {
     const { senha, confirmacaoSenha } = req.body
-    const { token } = req.query
+    const { token } = req.params
     try {
         if (senha != confirmacaoSenha) {
             return res.status(400).json({ mensagem: 'senhas não conferem' })
@@ -173,7 +173,7 @@ const redefinirSenha = async function (req, res) {
         const novoUsuario = await knex('usuarios').update({ senha: senhaCriptografada })
 
         const html = await compiladorhtml("./src/controladores/templates/redefinirSenha.html", {
-            nomeusuario: verificacaoPorEmail.nome,
+            nomeusuario: usuario.nome,
 
         })
 
@@ -187,6 +187,7 @@ const redefinirSenha = async function (req, res) {
         return res.status(200).json({ mensagem: 'senha redefinida com sucesso' })
 
     } catch (error) {
+
         return res.status(500).json({ mensagem: 'erro ao redefinir sua senha' })
     }
 }

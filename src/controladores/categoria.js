@@ -1,4 +1,5 @@
-const knex = require('knex');
+
+const knex = require("../db");
 
 const categoriaLista = async function (req, res) {
     const categoria = await knex('categorias').select('*')
@@ -8,8 +9,9 @@ const categoriaLista = async function (req, res) {
 const listagemCategoria = async function (req, res) {
     try {
         const categorias = await categoriaLista();
-        return res.status(200).json(categorias.rows)
+        return res.status(200).json(categorias)
     } catch (error) {
+
         return res.status(500).json({ mensagem: 'erro no categoria' })
     }
 }

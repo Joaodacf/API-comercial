@@ -14,3 +14,4 @@ const config = {
 const db = knex(config);
 
 module.exports = db;
+
