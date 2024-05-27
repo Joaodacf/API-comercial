@@ -11,7 +11,7 @@ const listagemCategoria = async function (req, res) {
         const categorias = await categoriaLista();
         return res.status(200).json(categorias)
     } catch (error) {
-
+        console.log(error);
         return res.status(500).json({ mensagem: 'erro no categoria' })
     }
 }

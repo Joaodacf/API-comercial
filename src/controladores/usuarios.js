@@ -9,8 +9,6 @@ const compiladorhtml = require('../compiladorhtml.js');
 
 
 
-
-
 const cadastrarUsuario = async function (req, res) {
     const { nome, email, senha } = req.body;
 
