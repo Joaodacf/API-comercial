@@ -30,14 +30,11 @@ git clone git@github.com:Joaodacf/API-comercial.git
 5: Execute o projeto: Npm run dev
 
 # Uso
-GitHub Copilot
-Claro, aqui está um exemplo de um arquivo README detalhado para o seu projeto. Por favor, substitua as partes relevantes com informações específicas do seu projeto.
-
 Navegue até o diretório do projeto:
-Instale as dependências:
-Crie um arquivo .env na raiz do projeto e adicione as seguintes variáveis de ambiente:
-Execute o projeto:
-Uso
+Instale as dependências: Npm I 
+Crie um arquivo .env na raiz do projeto e adicione as seguintes variáveis de ambiente: DB_URLHOST=your_database_url
+Execute o projeto: npm run dev
+##Uso
 Para adicionar um produto, faça uma solicitação POST para /produto com o seguinte corpo JSON:
 {
     "usuario_id": "1",
